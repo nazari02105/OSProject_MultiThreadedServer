@@ -5,7 +5,9 @@
 #include <netinet/in.h>
 
 #include <string.h>
+void *worker_thread(void *thread_data) {
 
+}
 int main( int argc, char *argv[] ) {
     int sockfd, newsockfd, portno, clilen;
     char buffer[256];
@@ -33,8 +35,15 @@ int main( int argc, char *argv[] ) {
 
     // start listening for the clients,
     // here process will go in sleep mode and will wait for the incoming connection
-    listen(sockfd, 5);
+    if (listen(sockfd, 5) == 0) {
+        printf("Server is listening...\n");
+    } else {
+        printf("ERROR on listening\n");
+    }
 
+    // array of worker threads
+    int count_threads = 20; //
+    pthread_t tid[count_threads];
     // accept actual connection from the client
     newsockfd = accept(sockfd, (struct sockaddr *)&cli_addr, &clilen);
 
