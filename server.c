@@ -33,10 +33,10 @@ int main( int argc, char *argv[] ) {
         exit(1);
     }
 
+    // start listening for the clients,
+    listen(sockfd, QUEUE_SIZE);
 
     while (1) {
-        // start listening for the clients,
-        listen(sockfd, QUEUE_SIZE);
 
         // accept actual connection from the client
         newsockfd = accept(sockfd, (struct sockaddr *)&cli_addr, &clilen);
