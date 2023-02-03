@@ -9,16 +9,14 @@
 #include <semaphore.h>
 #include <unistd.h>
 #include <limits.h>
+#include <arpa/inet.h>
+
 
 #define QUEUE_SIZE 5
 #define MAX_THREADS 10
-#define IDLE 0
-#define RESERVED 1
-#define RUNNING 2
 
 struct thread_data {
     int thread_id;
-    char buffer[256];
     int newsockfd;
     sem_t is_data_ready;
 };
@@ -41,13 +39,14 @@ void *worker_thread(void *data) {
     int newsockfd;
 
     while (1) {
-        // new client
-        pthread_cond_wait(&thread_data->is_data_ready, &thread_pool_mutex[thread_id]);
-        // extract data of new client
-        strcpy(buffer, thread_data->buffer);
+        // wait until data of a new client is assigned to this thread
+        sem_wait(&thread_data->is_data_ready);
+        // new client is assigned to this thread!
+
+        // extract data of new client (socket id)
         newsockfd = thread_data->newsockfd;
 
-        // inside this while loop, implemented communication with read/write or send/recv function
+        // read from client
         bzero(buffer,256);
         n = read(newsockfd, buffer, 255);
 
@@ -58,9 +57,9 @@ void *worker_thread(void *data) {
 
         printf("client said: whats the result of %s? \n", buffer);
 
-        int a, b, port, ip1, ip2, ip3, ip4;
+        int a, b, portno, ip1, ip2, ip3, ip4;
         char operator;
-        sscanf(buffer,"%d.%d.%d.%d - %d - %d %c %d", &ip1, &ip2, &ip3, &ip4, &port, &a, &operator, &b);
+        sscanf(buffer,"%d.%d.%d.%d - %d - %d %c %d", &ip1, &ip2, &ip3, &ip4, &portno, &a, &operator, &b);
         int result;
         switch (operator) {
             case '+':
@@ -86,16 +85,41 @@ void *worker_thread(void *data) {
                 break;
         }
 
+        // store the result of calculation in buffer
         sprintf(buffer,"result is: %d", result);
 
+        /*
+         * The way of communication with remote (in this case, client) is adopted from the link:
+         * https://stackoverflow.com/questions/15673846/how-to-give-to-a-client-specific-ip-address-in-c
+         * the part 'Connect to remote server' of Adam Rosenfield's answer is adopted
+        */
+        int sockfd;
+        struct sockaddr_in serv_addr;
+        char buffer[256];
+
+        // create socket
+        sockfd = socket(AF_INET, SOCK_STREAM, 0);
+
+        // ip of client waiting for response
+        char * ip_str = malloc(16);
+        sprintf(ip_str, "%d.%d.%d.%d", ip1, ip2, ip3, ip4);
+        in_addr_t ip = inet_addr(ip_str);
+
+        // data of server address
+        serv_addr.sin_family = AF_INET;
+        serv_addr.sin_addr.s_addr = ip;
+        serv_addr.sin_port = htons(portno);
+
+        if (connect(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
+            perror("ERROR while connecting");
+            exit(1);
+        }
 
         n = write(newsockfd, buffer, strlen(buffer));
-
         if (n < 0){
             perror("ERROR in writing to socket");
             exit(1);
         }
-
 
         // unlock mutex and increment semaphore (thread is free)
         pthread_mutex_unlock(&thread_pool_mutex[thread_id]);
@@ -165,7 +189,6 @@ int main( int argc, char *argv[] ) {
             // lock the mutex of the first free thread
             if (pthread_mutex_trylock(&thread_pool_mutex[i])) {
                 // allocate data to the thread
-                strcpy(data[i]->buffer, buffer);
                 data[i]->newsockfd = newsockfd;
                 // signal the thread that data is ready
                 sem_post(&data[i]->is_data_ready);
