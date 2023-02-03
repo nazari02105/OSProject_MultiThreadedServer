@@ -6,9 +6,11 @@
 #include <unistd.h>
 #include <netdb.h>
 #include <netinet/in.h>
+#include <semaphore.h>
 
 pthread_barrier_t threads_index;
 int server_port_generated = -1;
+sem_t mutex;
 
 void *thread_function(void *main_array) {
     int sockfd, newsockfd, portno, clilen;
@@ -30,6 +32,7 @@ void *thread_function(void *main_array) {
     if (getsockname(sockfd, (struct sockaddr *) &serv_addr, &len) != -1) {
         int random_port = ntohs(serv_addr.sin_port);
         server_port_generated = random_port;
+        sem_post(&mutex);
     }
     while (1){
         listen(sockfd, 5);
@@ -49,6 +52,8 @@ void *thread_function(void *main_array) {
 pthread_t all_threads[1];
 
 int main() {
+    sem_init(&mutex, 0, 1);
+    sem_wait(&mutex);
     // create threads
     pthread_barrier_init(&threads_index, NULL, 1);
     for (int i = 0; i < 1; i++) {
@@ -56,8 +61,6 @@ int main() {
         to_pass[0] = i;
         pthread_create(&all_threads[i], NULL, thread_function, (void *) to_pass);
     }
-//    for (int i = 0; i < 1; i++)
-//        pthread_join(all_threads[i], NULL);
     // main part for client socket
     while (1) {
         int sockfd, portno, n;
@@ -70,8 +73,9 @@ int main() {
         bzero(buffer, 256);
         char math_statement[256];
         gets(math_statement);
-        while (server_port_generated == -1);
+        sem_wait(&mutex);
         sprintf(buffer, "127.0.0.1 - %d - %s", server_port_generated, math_statement);
+        sem_post(&mutex);
 
         sockfd = socket(AF_INET, SOCK_STREAM, 0);
         server = gethostbyname("127.0.0.1");
