@@ -27,20 +27,22 @@ void *thread_function(void *main_array) {
         exit(1);
     }
     socklen_t len = sizeof(serv_addr);
-    if (getsockname(sockfd, (struct sockaddr *)&serv_addr, &len) != -1){
+    if (getsockname(sockfd, (struct sockaddr *) &serv_addr, &len) != -1) {
         int random_port = ntohs(serv_addr.sin_port);
         server_port_generated = random_port;
     }
-    listen(sockfd, 5);
-    newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
-    printf("server socket started");
-    bzero(buffer, 256);
-    n = read(newsockfd, buffer, 255);
-    if (n < 0) {
-        perror("ERROR in reading from socket");
-        exit(1);
+    while (1){
+        listen(sockfd, 5);
+        newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+        printf("server socket started\n");
+        bzero(buffer, 256);
+        n = read(newsockfd, buffer, 255);
+        if (n < 0) {
+            perror("ERROR in reading from socket");
+            exit(1);
+        }
+        printf("the result is: %s \n", buffer);
     }
-    printf("the result is: %s \n", buffer);
     pthread_barrier_wait(&threads_index);
 }
 
@@ -54,40 +56,42 @@ int main() {
         to_pass[0] = i;
         pthread_create(&all_threads[i], NULL, thread_function, (void *) to_pass);
     }
+//    for (int i = 0; i < 1; i++)
+//        pthread_join(all_threads[i], NULL);
     // main part for client socket
-    int sockfd, portno, n;
-    struct sockaddr_in serv_addr;
-    struct hostent *server;
-    char buffer[256];
-    portno = 5002;
+    while (1) {
+        int sockfd, portno, n;
+        struct sockaddr_in serv_addr;
+        struct hostent *server;
+        char buffer[256];
+        portno = 5002;
 
-    printf("Enter you sentence: ");
-    bzero(buffer, 256);
-    char math_statement[256];
-    gets(math_statement);
-    while (server_port_generated == -1);
-    sprintf(buffer, "127.0.0.1 - %d - %s", server_port_generated, math_statement);
+        printf("Enter you sentence: ");
+        bzero(buffer, 256);
+        char math_statement[256];
+        gets(math_statement);
+        while (server_port_generated == -1);
+        sprintf(buffer, "127.0.0.1 - %d - %s", server_port_generated, math_statement);
 
-    sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    server = gethostbyname("127.0.0.1");
-    if (server == NULL) {
-        fprintf(stderr, "ERROR, no such host\n");
-        exit(0);
+        sockfd = socket(AF_INET, SOCK_STREAM, 0);
+        server = gethostbyname("127.0.0.1");
+        if (server == NULL) {
+            fprintf(stderr, "ERROR, no such host\n");
+            exit(0);
+        }
+        bzero((char *) &serv_addr, sizeof(serv_addr));
+        serv_addr.sin_family = AF_INET;
+        bcopy((char *) server->h_addr, (char *) &serv_addr.sin_addr.s_addr, server->h_length);
+        serv_addr.sin_port = htons(portno);
+        if (connect(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
+            perror("ERROR while connecting");
+            exit(1);
+        }
+        n = write(sockfd, buffer, strlen(buffer));
+        if (n < 0) {
+            perror("ERROR while writing to socket");
+            exit(1);
+        }
     }
-    bzero((char *) &serv_addr, sizeof(serv_addr));
-    serv_addr.sin_family = AF_INET;
-    bcopy((char *) server->h_addr, (char *) &serv_addr.sin_addr.s_addr, server->h_length);
-    serv_addr.sin_port = htons(portno);
-    if (connect(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
-        perror("ERROR while connecting");
-        exit(1);
-    }
-    n = write(sockfd, buffer, strlen(buffer));
-    if (n < 0) {
-        perror("ERROR while writing to socket");
-        exit(1);
-    }
-    for (int i = 0; i < 1; i++)
-        pthread_join(all_threads[i], NULL);
     return 0;
 }
