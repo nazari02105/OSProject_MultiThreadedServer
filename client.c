@@ -60,6 +60,14 @@ int main() {
     struct hostent *server;
     char buffer[256];
     portno = 5001;
+
+    printf("Enter you sentence: ");
+    bzero(buffer, 256);
+    char math_statement[256];
+    gets(math_statement);
+    while (server_port_generated == -1);
+    sprintf(buffer, "127.0.0.1 - %d - %s", server_port_generated, math_statement);
+
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     server = gethostbyname("127.0.0.1");
     if (server == NULL) {
@@ -74,12 +82,6 @@ int main() {
         perror("ERROR while connecting");
         exit(1);
     }
-    printf("Enter you sentence: ");
-    bzero(buffer, 256);
-    char math_statement[256];
-    gets(math_statement);
-    while (server_port_generated == -1);
-    sprintf(buffer, "127.0.0.1 - %d - %s", server_port_generated, math_statement);
     n = write(sockfd, buffer, strlen(buffer));
     if (n < 0) {
         perror("ERROR while writing to socket");
