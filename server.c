@@ -5,6 +5,7 @@
 #include <netinet/in.h>
 
 #include <string.h>
+#include<time.h>
 
 #define QUEUE_SIZE 5
 
@@ -13,10 +14,11 @@ int main( int argc, char *argv[] ) {
     char buffer[256];
     struct sockaddr_in serv_addr, cli_addr;
     int  n;
-
+    time_t t,time1,time2;
+    time(&t);
     /* Initialize socket structure */
     bzero((char *) &serv_addr, sizeof(serv_addr));
-    portno = 5002;
+    portno = 5001;
 
     // create socket and get file descriptor
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -40,11 +42,16 @@ int main( int argc, char *argv[] ) {
 
         // accept actual connection from the client
         newsockfd = accept(sockfd, (struct sockaddr *)&cli_addr, &clilen);
+        printf("\nA client accepted at time (date and time): %s", ctime(&t));
+
 
         // inside this while loop, implemented communication with read/write or send/recv function
         printf("Server start");
 
         bzero(buffer,256);
+
+        //reading time:
+        time(time1);
         n = read(newsockfd, buffer, 255);
 
         if (n < 0){
@@ -86,8 +93,12 @@ int main( int argc, char *argv[] ) {
 
         sprintf(buffer,"result is:%d (-1 means error or result)",result);
 
+        //time resut is ready :
+        // time(time2);
         n = write(newsockfd, buffer, strlen(buffer));
 
+        // printf("Difference time from recienve and result ready is %.2f seconds",
+        //    difftime(time2, time1));
         if (n < 0){
             perror("ERROR in writing to socket");
             exit(1);

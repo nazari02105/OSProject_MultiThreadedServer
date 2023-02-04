@@ -29,7 +29,7 @@ int main(int argc, char *argv[]) {
 
                 struct hostent *server;
 
-                portno = 5002;
+                portno = 5001;
 
                 // create socket and get file descriptor
                 sockfd = socket(AF_INET, SOCK_STREAM, 0);
