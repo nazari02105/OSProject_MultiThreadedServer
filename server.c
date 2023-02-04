@@ -13,7 +13,7 @@
 
 
 #define QUEUE_SIZE 5
-#define MAX_THREADS 10
+#define MAX_THREADS 3
 
 struct thread_data {
     int thread_id;
@@ -84,7 +84,7 @@ void *worker_thread(void *data) {
             default:
                 break;
         }
-
+        sleep(20);
         // store the result of calculation in buffer
         sprintf(buffer,"result is: %d", result);
 
@@ -95,7 +95,7 @@ void *worker_thread(void *data) {
         */
         int sockfd;
         struct sockaddr_in serv_addr;
-        char buffer[256];
+        // char buffer[256];
 
         // create socket
         sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -107,7 +107,7 @@ void *worker_thread(void *data) {
 
         // data of server address
         serv_addr.sin_family = AF_INET;
-        serv_addr.sin_addr.s_addr = ip;
+        serv_addr.sin_addr.s_addr = INADDR_ANY;
         serv_addr.sin_port = htons(portno);
 
         if (connect(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
@@ -115,7 +115,7 @@ void *worker_thread(void *data) {
             exit(1);
         }
 
-        n = write(newsockfd, buffer, strlen(buffer));
+        n = write(sockfd, buffer, strlen(buffer));
         if (n < 0){
             perror("ERROR in writing to socket");
             exit(1);
@@ -148,7 +148,7 @@ int main( int argc, char *argv[] ) {
     bzero((char *) &serv_addr, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_addr.s_addr = INADDR_ANY;
-    portno = 5003;
+    portno = 5002;
     serv_addr.sin_port = htons(portno);
     clilen = sizeof(cli_addr);
 
@@ -187,7 +187,7 @@ int main( int argc, char *argv[] ) {
         // find the available thread...
         for (int i = 0; i < MAX_THREADS; i++) {
             // lock the mutex of the first free thread
-            if (pthread_mutex_trylock(&thread_pool_mutex[i])) {
+            if (pthread_mutex_trylock(&thread_pool_mutex[i])==0) {
                 // allocate data to the thread
                 data[i]->newsockfd = newsockfd;
                 // signal the thread that data is ready
