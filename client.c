@@ -11,7 +11,7 @@
 pthread_barrier_t threads_index;
 int server_port_generated = -1;
 sem_t mutex;
-unsigned long send_request_time;
+time_t send_request_time;
 
 void *thread_function(void *main_array) {
     int sockfd, newsockfd, portno, clilen;
@@ -45,10 +45,9 @@ void *thread_function(void *main_array) {
             perror("ERROR in reading from socket");
             exit(1);
         }
-        printf("request was answered in %lu seconds\n", (unsigned long)time(NULL) - send_request_time);
+        printf("request was answered in %f seconds\n", difftime(time(NULL), send_request_time));
         printf("the result is: %s \n", buffer);
     }
-    pthread_barrier_wait(&threads_index);
 }
 
 pthread_t all_threads[1];
@@ -93,7 +92,7 @@ int main() {
             perror("ERROR while connecting");
             exit(1);
         }
-        send_request_time = (unsigned long)time(NULL);
+        send_request_time = time(NULL);
         n = write(sockfd, buffer, strlen(buffer));
         if (n < 0) {
             perror("ERROR while writing to socket");
