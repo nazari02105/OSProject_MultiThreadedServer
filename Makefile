@@ -1,3 +1,4 @@
 all:
-	gcc -o server server.c
-	gcc -o client client.c
+	bash run_server.sh
+	bash run_client.sh
+
